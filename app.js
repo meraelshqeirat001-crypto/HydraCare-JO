@@ -14,11 +14,128 @@ function t(k){return translations[lang][k]||k}
 function toast(msg){const el=$("#toast");el.textContent=msg;el.classList.add("show");setTimeout(()=>el.classList.remove("show"),2400)}
 function renderText(){document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";document.querySelectorAll("[data-i18n]").forEach(e=>e.textContent=t(e.dataset.i18n));$("#langBtn").textContent=lang==="ar"?"English":"العربية";render()}
 function render(){const pct=Math.min(100,Math.round(consumed/goal*100));$("#consumed").textContent=consumed.toLocaleString();$("#goal").textContent=goal.toLocaleString();$("#percent").textContent=pct+"%";$("#progressRing").style.background=`conic-gradient(var(--blue) ${pct*3.6}deg,#e7f1f4 0deg)`;$("#goalInput").value=goal;$("#todayLabel").textContent=new Date().toLocaleDateString(lang==="ar"?"ar-JO":"en-US",{weekday:"short",month:"short",day:"numeric"});const list=$("#logList");list.innerHTML="";if(!entries.length){list.innerHTML=`<li class="empty">${t("empty")}</li>`;return}entries.slice().reverse().forEach(e=>{const li=document.createElement("li");li.innerHTML=`<span>${new Date(e.createdAt||Date.now()).toLocaleTimeString(lang==="ar"?"ar-JO":"en-US",{hour:"2-digit",minute:"2-digit"})}</span><b>+${e.amount} ml</b>`;list.append(li)})}
-async function persist(){localStorage.setItem("hc-local",JSON.stringify({date:today(),consumed,goal,entries}));if(user&&db){try{await setDoc(doc(db,"users",user.uid),{goal,updatedAt:serverTimestamp()},{merge:true});await setDoc(doc(db,"users",user.uid,"daily",today()),{consumed,goal,updatedAt:serverTimestamp()},{merge:true})}catch(e){console.error(e);toast("Could not sync data. Check Firebase settings.")}}}
+
+function storageKey() {
+  return user ? `hc-local-${user.uid}` : "hc-local-guest";
+}
+
+async function persist() {
+  localStorage.setItem(storageKey(), JSON.stringify({
+    date: today(),
+    consumed,
+    goal,
+    entries
+  }));
+
+  if (user && db) {
+    try {
+      await setDoc(doc(db, "users", user.uid), {
+        goal,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      await setDoc(doc(db, "users", user.uid, "daily", today()), {
+        consumed,
+        goal,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    } catch (e) {
+      console.error(e);
+      toast("Could not sync data.");
+    }
+  }
+}
 async function addWater(amount){consumed+=amount;const entry={amount,createdAt:Date.now()};entries.push(entry);render();await persist();if(user&&db){try{await addDoc(collection(db,"users",user.uid,"entries"),{...entry,date:today(),createdAt:serverTimestamp()})}catch(e){console.error(e)}}toast(lang==="ar"?`تمت إضافة ${amount} مل من الماء`:`Added ${amount} ml of water`)}
-function loadLocal(){const x=JSON.parse(localStorage.getItem("hc-local")||"null");if(x&&x.date===today()){consumed=x.consumed||0;goal=x.goal||2000;entries=x.entries||[]}else{consumed=0;entries=[]}render()}
-async function loadCloud(){if(!user||!db)return;try{const snap=await getDoc(doc(db,"users",user.uid));if(snap.exists())goal=snap.data().goal||goal;const day=await getDoc(doc(db,"users",user.uid,"daily",today()));if(day.exists())consumed=day.data().consumed||0;const q=query(collection(db,"users",user.uid,"entries"),where("date","==",today()),orderBy("createdAt","asc"));const rows=await getDocs(q);entries=rows.docs.map(d=>({amount:d.data().amount,createdAt:Date.now()}));await persist();render()}catch(e){console.warn(e)}}
-function setupFirebase(){if(firebaseConfig.apiKey==="YOUR_API_KEY"){console.info("Firebase not configured yet; local mode enabled.");return}try{const app=initializeApp(firebaseConfig);auth=getAuth(app);db=getFirestore(app);onAuthStateChanged(auth,async u=>{user=u;$("#authBtn").textContent=u?(lang==="ar"?"خروج":"Sign out"):t("login");if(u)await loadCloud()})}catch(e){console.error(e);toast("Firebase configuration error")}}
+
+function loadLocal() {
+  const x = JSON.parse(
+    localStorage.getItem(storageKey()) || "null"
+  );
+
+  if (x && x.date === today()) {
+    consumed = x.consumed || 0;
+    goal = x.goal || 2000;
+    entries = x.entries || [];
+  } else {
+    consumed = 0;
+    goal = 2000;
+    entries = [];
+  }
+
+  render();
+}
+
+async function loadCloud() {
+  if (!user || !db) return;
+
+  // Reset before loading another user's data
+  consumed = 0;
+  goal = 2000;
+  entries = [];
+  render();
+
+  try {
+    const uid = user.uid;
+
+    const snap = await getDoc(doc(db, "users", uid));
+
+    if (snap.exists()) {
+      goal = snap.data().goal || 2000;
+    }
+
+    const day = await getDoc(
+      doc(db, "users", uid, "daily", today())
+    );
+
+    if (day.exists()) {
+      consumed = day.data().consumed || 0;
+      goal = day.data().goal || goal;
+    }
+
+    const q = query(
+      collection(db, "users", uid, "entries"),
+      where("date", "==", today()),
+      orderBy("createdAt", "asc")
+    );
+
+    const rows = await getDocs(q);
+
+    entries = rows.docs.map(d => ({
+      amount: d.data().amount,
+      createdAt: Date.now()
+    }));
+
+    localStorage.setItem(storageKey(), JSON.stringify({
+      date: today(),
+      consumed,
+      goal,
+      entries
+    }));
+
+    render();
+
+  } catch (e) {
+    console.error("LOAD USER DATA ERROR:", e);
+    toast("Error loading your personal data.");
+  }
+}
+function setupFirebase(){if(firebaseConfig.apiKey==="YOUR_API_KEY"){console.info("Firebase not configured yet; local mode enabled.");return}try{const app=initializeApp(firebaseConfig);auth=getAuth(app);db=getFirestore(app);
+onAuthStateChanged(auth, async u => {
+  user = u;
+
+  $("#authBtn").textContent = u
+    ? (lang === "ar" ? "خروج" : "Sign out")
+    : t("login");
+
+  if (u) {
+    await loadCloud();
+  } else {
+    consumed = 0;
+    goal = 2000;
+    entries = [];
+    loadLocal();
+  }
+});
 $("#langBtn").onclick=()=>{lang=lang==="ar"?"en":"ar";renderText()};
 $("#quickAdd").onclick=()=>addWater(250);
 document.querySelectorAll("[data-amount]").forEach(b=>b.onclick=()=>addWater(Number(b.dataset.amount)));
