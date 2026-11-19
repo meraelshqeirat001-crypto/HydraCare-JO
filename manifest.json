@@ -1,0 +1,20 @@
+{
+  "name": "HydraCare-JO",
+  "short_name": "HydraCare",
+  "description": "Hydration tracking and dehydration awareness",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5fafc",
+  "theme_color": "#168aad",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

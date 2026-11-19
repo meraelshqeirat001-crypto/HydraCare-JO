@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#168aad">
+  <meta name="description" content="HydraCare-JO — تطبيق متابعة الترطيب والتوعية بالوقاية من الجفاف">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <title>HydraCare-JO | رعايتك تبدأ بقطرة</title>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="#"><span class="drop">💧</span><span>HydraCare-<b>JO</b><small data-i18n="tagline">رعايتك تبدأ بقطرة</small></span></a>
+  <div class="top-actions">
+    <button id="langBtn" class="ghost">English</button>
+    <button id="authBtn" class="primary small" data-i18n="login">تسجيل الدخول</button>
+  </div>
+</header>
+<main class="container">
+  <section class="hero">
+    <div><p class="eyebrow" data-i18n="welcome">أهلاً بك في</p><h1>HydraCare-JO</h1>
+    <p data-i18n="heroText">تابع شرب الماء، واضبط تذكيراتك، واعتنِ بصحتك كل يوم.</p>
+    <div class="hero-actions"><button class="primary" id="quickAdd" data-i18n="addGlass">＋ أضف كوب ماء</button><button class="outline" id="reminderToggle" data-i18n="enableReminders">تفعيل التذكيرات</button></div></div>
+    <div class="hero-art" aria-hidden="true"><div class="big-drop">💧</div><span>H₂O</span></div>
+  </section>
+
+  <section class="grid">
+    <article class="card progress-card">
+      <div class="section-head"><div><p class="eyebrow" data-i18n="today">إنجاز اليوم</p><h2 data-i18n="hydration">مستوى الترطيب</h2></div><span class="pill" id="todayLabel"></span></div>
+      <div class="progress-wrap"><div class="progress-ring" id="progressRing"><div><strong id="percent">0%</strong><small data-i18n="goalDone">من الهدف</small></div></div>
+      <div class="stats"><strong><span id="consumed">0</span> <small data-i18n="ml">مل</small></strong><span data-i18n="consumedToday">تم شربها اليوم</span><hr><strong><span id="goal">2000</span> <small data-i18n="ml">مل</small></strong><span data-i18n="dailyGoal">الهدف اليومي</span></div></div>
+      <div class="quick-amounts"><button data-amount="150">+150 ml</button><button data-amount="250">+250 ml</button><button data-amount="500">+500 ml</button></div>
+    </article>
+    <article class="card">
+      <div class="section-head"><div><p class="eyebrow" data-i18n="personal">إعداداتك</p><h2 data-i18n="dailyTarget">هدفك اليومي</h2></div><span class="icon-bubble">🎯</span></div>
+      <p class="muted" data-i18n="targetHint">يمكنك تعديل هدف الترطيب اليومي وفق احتياجاتك وتوجيهات مقدم الرعاية الصحية.</p>
+      <label for="goalInput" data-i18n="goalMl">الهدف بالملليلتر</label><div class="input-row"><input id="goalInput" type="number" min="250" max="6000" step="250" value="2000"><button class="primary" id="saveGoal" data-i18n="save">حفظ</button></div>
+      <p class="tiny muted" data-i18n="goalNote">الهدف المعروض إرشادي ويمكن أن يختلف حسب العمر والحالة الصحية والطقس والنشاط.</p>
+    </article>
+  </section>
+
+  <section class="grid lower">
+    <article class="card">
+      <div class="section-head"><div><p class="eyebrow" data-i18n="learn">تثقّف</p><h2 data-i18n="dehydration">العناية بالجفاف</h2></div><span class="icon-bubble">🩺</span></div>
+      <div class="info-list">
+        <div><span>💧</span><p><b data-i18n="symptoms">علامات قد تشير إلى الجفاف</b><small data-i18n="symptomsText">العطش، جفاف الفم، قلة التبول أو تغير لون البول إلى الداكن، والدوخة.</small></p></div>
+        <div><span>🥤</span><p><b data-i18n="prevention">الوقاية</b><small data-i18n="preventionText">اشرب السوائل بانتظام، وزد الانتباه في الحر وأثناء النشاط البدني.</small></p></div>
+        <div><span>⚠️</span><p><b data-i18n="urgent">متى تطلب المساعدة؟</b><small data-i18n="urgentText">اطلب رعاية طبية عاجلة عند الارتباك أو الإغماء أو صعوبة الاستيقاظ أو تدهور الحالة.</small></p></div>
+      </div>
+      <p class="notice" data-i18n="medicalNote">هذه المعلومات للتوعية ولا تغني عن التقييم الطبي. قد يحتاج بعض الأشخاص إلى تقييد السوائل وفق تعليمات الطبيب.</p>
+    </article>
+    <article class="card">
+      <div class="section-head"><div><p class="eyebrow" data-i18n="history">سجلّك</p><h2 data-i18n="recent">آخر الإضافات</h2></div><button class="text-btn" id="clearToday" data-i18n="clear">مسح سجل اليوم</button></div>
+      <ul id="logList" class="log-list"><li class="empty" data-i18n="empty">لم تسجل أي كمية بعد. ابدأ بإضافة كوب ماء.</li></ul>
+    </article>
+  </section>
+  <section class="card account-card"><div><h2 data-i18n="syncTitle">احفظ بياناتك بأمان</h2><p class="muted" data-i18n="syncText">سجّل الدخول لمزامنة سجل الترطيب بين أجهزتك باستخدام Firebase.</p></div><button class="outline" id="accountAction" data-i18n="createAccount">إنشاء حساب / دخول</button></section>
+</main>
+<footer><span>💧 HydraCare-JO</span><span data-i18n="footer">مشروع توعوي صحي — الأردن</span></footer>
+
+<dialog id="authDialog">
+  <form method="dialog" id="authForm" class="auth-form">
+    <button class="close" value="cancel" aria-label="Close">×</button><h2 data-i18n="account">حساب HydraCare-JO</h2>
+    <label for="email">Email</label><input id="email" type="email" required autocomplete="email" placeholder="name@example.com">
+    <label for="password" data-i18n="password">كلمة المرور</label><input id="password" type="password" required minlength="6" autocomplete="current-password">
+    <div class="auth-buttons"><button type="button" class="primary" id="signIn" data-i18n="login">تسجيل الدخول</button><button type="button" class="outline" id="signUp" data-i18n="register">إنشاء حساب</button></div>
+    <p id="authMessage" class="tiny muted"></p>
+  </form>
+</dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="./app.js"></script>
+</body></html>
