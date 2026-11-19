@@ -27,7 +27,39 @@ $("#clearToday").onclick=async()=>{if(!confirm(lang==="ar"?"هل تريد مسح
 $("#authBtn").onclick=()=>{if(user){signOut(auth)}else $("#authDialog").showModal()};
 $("#accountAction").onclick=()=>$("#authDialog").showModal();
 $("#signIn").onclick=async()=>{if(!auth){$("#authMessage").textContent="Add your Firebase config first.";return}try{await signInWithEmailAndPassword(auth,$("#email").value,$("#password").value);$("#authDialog").close();toast("Signed in")}catch(e){$("#authMessage").textContent=e.message}};
-$("#signUp").onclick=async()=>{if(!auth){$("#authMessage").textContent="Add your Firebase config first.";return}try{await createUserWithEmailAndPassword(auth,$("#email").value,$("#password").value);$("#authDialog").close();toast("Account created")}catch(e){$("#authMessage").textContent=e.message}};
+
+$("#signUp").onclick = async () => {
+  const email = $("#email").value.trim();
+  const password = $("#password").value;
+
+  if (!auth) {
+    $("#authMessage").textContent = "Firebase is not connected.";
+    return;
+  }
+
+  if (!email || !password) {
+    $("#authMessage").textContent = "Please enter email and password.";
+    return;
+  }
+
+  try {
+    const result = await createUserWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
+
+    console.log("Account created:", result.user.uid);
+    $("#authDialog").close();
+    toast("Account created successfully!");
+
+  } catch (e) {
+    console.error("SIGNUP ERROR:", e.code, e.message);
+    $("#authMessage").textContent =
+      "Error code: " + e.code + " — " + e.message;
+  }
+};
+
 $("#reminderToggle").onclick=async()=>{if(!("Notification"in window)){toast(lang==="ar"?"المتصفح لا يدعم الإشعارات":"Notifications are not supported");return}const p=await Notification.requestPermission();if(p==="granted"){toast(lang==="ar"?"تم تفعيل التذكير أثناء فتح التطبيق":"Reminders enabled while app is open");new Notification("HydraCare-JO",{body:lang==="ar"?"حان وقت شرب بعض الماء 💧":"Time to drink some water 💧"})}else toast(lang==="ar"?"لم يتم السماح بالإشعارات":"Notification permission not granted")};
 let reminderTimer=null;function startReminders(){if(reminderTimer)clearInterval(reminderTimer);reminderTimer=setInterval(()=>{if(document.visibilityState==="visible"&&"Notification"in window&&Notification.permission==="granted")new Notification("HydraCare-JO",{body:lang==="ar"?"تذكير لطيف: خذ استراحة واشرب الماء 💧":"Gentle reminder: take a break and drink water 💧"})},60*60*1000)}
 loadLocal();renderText();setupFirebase();startReminders();
