@@ -121,12 +121,13 @@ async function loadCloud() {
 }
 
 function setupFirebase() {
-  if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY") {
-    console.info("Firebase not configured. Running in local mode.");
-    return;
-  }
-
   try {
+    if (!firebaseConfig.apiKey ||
+        firebaseConfig.apiKey === "YOUR_API_KEY") {
+      console.info("Firebase unavailable. Local mode enabled.");
+      return;
+    }
+
     const app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
@@ -145,27 +146,26 @@ function setupFirebase() {
       }
     });
 
-  } catch (e) {
-    console.error("Firebase initialization error:", e);
-    toast("Firebase connection failed. Local mode enabled.");
+  } catch (error) {
+    console.error("Firebase error:", error);
+    toast("Firebase connection error. Local mode enabled.");
   }
 }
 
-// ===============================
-// BUTTON EVENTS
-// ===============================
-
+// Language
 $("#langBtn").onclick = () => {
   lang = lang === "ar" ? "en" : "ar";
   renderText();
 };
 
+// Add water
 $("#quickAdd").onclick = () => addWater(250);
 
 document.querySelectorAll("[data-amount]").forEach(button => {
   button.onclick = () => addWater(Number(button.dataset.amount));
 });
 
+// Save goal
 $("#saveGoal").onclick = async () => {
   const n = Number($("#goalInput").value);
 
@@ -183,6 +183,7 @@ $("#saveGoal").onclick = async () => {
   toast(lang === "ar" ? "تم حفظ الهدف" : "Goal saved");
 };
 
+// Clear daily log
 $("#clearToday").onclick = async () => {
   if (!confirm(lang === "ar"
     ? "هل تريد مسح سجل اليوم؟"
@@ -199,9 +200,14 @@ $("#clearToday").onclick = async () => {
     : "Today's log cleared");
 };
 
-$("#authBtn").onclick = () => {
+// Account
+$("#authBtn").onclick = async () => {
   if (user && auth) {
-    signOut(auth);
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error(error);
+    }
   } else {
     $("#authDialog").showModal();
   }
@@ -211,9 +217,11 @@ $("#accountAction").onclick = () => {
   $("#authDialog").showModal();
 };
 
+// Sign in
 $("#signIn").onclick = async () => {
   if (!auth) {
-    $("#authMessage").textContent = "Firebase is not connected.";
+    $("#authMessage").textContent =
+      "Firebase is not connected.";
     return;
   }
 
@@ -227,38 +235,108 @@ $("#signIn").onclick = async () => {
     $("#authDialog").close();
     toast("Signed in successfully!");
 
-  } catch (e) {
-    console.error(e);
-    $("#authMessage").textContent = e.message;
+  } catch (error) {
+    console.error(error);
+    $("#authMessage").textContent = error.message;
   }
 };
 
+// Sign up
 $("#signUp").onclick = async () => {
   const email = $("#email").value.trim();
   const password = $("#password").value;
 
   if (!auth) {
-    $("#authMessage").textContent = "Firebase is not connected.";
+    $("#authMessage").textContent =
+      "Firebase is not connected.";
     return;
   }
 
   if (!email || !password) {
-    $("#authMessage").textContent = "Please enter email and password.";
+    $("#authMessage").textContent =
+      "Please enter email and password.";
     return;
   }
 
   try {
-    await createUserWithEmailAndPassword(auth, email, password);
+    await createUserWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
 
     $("#authDialog").close();
     toast("Account created successfully!");
 
-  } catch (e) {
-    console.error(e);
-    $("#authMessage").textContent = e.message;
+  } catch (error) {
+    console.error(error);
+    $("#authMessage").textContent = error.message;
   }
 };
 
-// ===============================
-// REMINDERS
-// ===============================
+// Reminders
+let reminderTimer = null;
+
+function startReminders() {
+  if (reminderTimer) {
+    clearInterval(reminderTimer);
+  }
+
+  reminderTimer = setInterval(() => {
+    if (
+      document.visibilityState === "visible" &&
+      "Notification" in window &&
+      Notification.permission === "granted"
+    ) {
+      new Notification("HydraCare-JO", {
+        body: lang === "ar"
+          ? "تذكير لطيف: اشرب الماء 💧"
+          : "Gentle reminder: drink water 💧"
+      });
+    }
+  }, 60 * 60 * 1000);
+}
+
+$("#reminderToggle").onclick = async () => {
+  if (!("Notification" in window)) {
+    toast(lang === "ar"
+      ? "المتصفح لا يدعم الإشعارات"
+      : "Notifications are not supported");
+    return;
+  }
+
+  try {
+    const permission = await Notification.requestPermission();
+
+    if (permission === "granted") {
+      startReminders();
+
+      new Notification("HydraCare-JO", {
+        body: lang === "ar"
+          ? "حان وقت شرب الماء 💧"
+          : "Time to drink water 💧"
+      });
+
+      toast(lang === "ar"
+        ? "تم تفعيل التذكيرات"
+        : "Reminders enabled");
+
+    } else {
+      toast(lang === "ar"
+        ? "لم يتم السماح بالإشعارات"
+        : "Notification permission not granted");
+    }
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+// Start application
+loadLocal();
+renderText();
+setupFirebase();
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js")
+    .catch(error => console.error("Service Worker:", error));
+}
