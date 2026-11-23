@@ -119,23 +119,213 @@ async function loadCloud() {
     toast("Error loading your personal data.");
   }
 }
-function setupFirebase(){if(firebaseConfig.apiKey==="YOUR_API_KEY"){console.info("Firebase not configured yet; local mode enabled.");return}try{const app=initializeApp(firebaseConfig);auth=getAuth(app);db=getFirestore(app);
-onAuthStateChanged(auth, async u => {
-  user = u;
 
-  $("#authBtn").textContent = u
-    ? (lang === "ar" ? "خروج" : "Sign out")
-    : t("login");
-
-  if (u) {
-    await loadCloud();
-  } else {
-    consumed = 0;
-    goal = 2000;
-    entries = [];
-    loadLocal();
+function setupFirebase() {
+  if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY") {
+    console.info("Firebase not configured. Running in local mode.");
+    return;
   }
+
+  try {
+    const app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+
+    onAuthStateChanged(auth, async (u) => {
+      user = u;
+
+      $("#authBtn").textContent = u
+        ? (lang === "ar" ? "خروج" : "Sign out")
+        : t("login");
+
+      if (u) {
+        await loadCloud();
+      } else {
+        loadLocal();
+      }
+    });
+
+  } catch (e) {
+    console.error("Firebase initialization error:", e);
+    toast("Firebase connection failed. Local mode enabled.");
+  }
+}
+
+// ===============================
+// BUTTON EVENTS
+// ===============================
+
+$("#langBtn").onclick = () => {
+  lang = lang === "ar" ? "en" : "ar";
+  renderText();
+};
+
+$("#quickAdd").onclick = () => addWater(250);
+
+document.querySelectorAll("[data-amount]").forEach(button => {
+  button.onclick = () => addWater(Number(button.dataset.amount));
 });
+
+$("#saveGoal").onclick = async () => {
+  const n = Number($("#goalInput").value);
+
+  if (!Number.isFinite(n) || n < 250 || n > 6000) {
+    toast(lang === "ar"
+      ? "أدخل هدفاً بين 250 و6000 مل"
+      : "Enter a goal between 250 and 6000 ml");
+    return;
+  }
+
+  goal = n;
+  render();
+  await persist();
+
+  toast(lang === "ar" ? "تم حفظ الهدف" : "Goal saved");
+};
+
+$("#clearToday").onclick = async () => {
+  if (!confirm(lang === "ar"
+    ? "هل تريد مسح سجل اليوم؟"
+    : "Clear today's log?")) return;
+
+  consumed = 0;
+  entries = [];
+
+  render();
+  await persist();
+
+  toast(lang === "ar"
+    ? "تم مسح سجل اليوم"
+    : "Today's log cleared");
+};
+
+$("#authBtn").onclick = () => {
+  if (user && auth) {
+    signOut(auth);
+  } else {
+    $("#authDialog").showModal();
+  }
+};
+
+$("#accountAction").onclick = () => {
+  $("#authDialog").showModal();
+};
+
+$("#signIn").onclick = async () => {
+  if (!auth) {
+    $("#authMessage").textContent = "Firebase is not connected.";
+    return;
+  }
+
+  try {
+    await signInWithEmailAndPassword(
+      auth,
+      $("#email").value.trim(),
+      $("#password").value
+    );
+
+    $("#authDialog").close();
+    toast("Signed in successfully!");
+
+  } catch (e) {
+    console.error(e);
+    $("#authMessage").textContent = e.message;
+  }
+};
+
+$("#signUp").onclick = async () => {
+  const email = $("#email").value.trim();
+  const password = $("#password").value;
+
+  if (!auth) {
+    $("#authMessage").textContent = "Firebase is not connected.";
+    return;
+  }
+
+  if (!email || !password) {
+    $("#authMessage").textContent = "Please enter email and password.";
+    return;
+  }
+
+  try {
+    await createUserWithEmailAndPassword(auth, email, password);
+
+    $("#authDialog").close();
+    toast("Account created successfully!");
+
+  } catch (e) {
+    console.error(e);
+    $("#authMessage").textContent = e.message;
+  }
+};
+
+// ===============================
+// REMINDERS
+// ===============================
+
+let reminderTimer = null;
+
+$("#reminderToggle").onclick = async () => {
+  if (!("Notification" in window)) {
+    toast(lang === "ar"
+      ? "المتصفح لا يدعم الإشعارات"
+      : "Notifications are not supported");
+    return;
+  }
+
+  const permission = await Notification.requestPermission();
+
+  if (permission === "granted") {
+    toast(lang === "ar"
+      ? "تم تفعيل التذكيرات"
+      : "Reminders enabled");
+
+    new Notification("HydraCare-JO", {
+      body: lang === "ar"
+        ? "حان وقت شرب بعض الماء 💧"
+        : "Time to drink some water 💧"
+    });
+
+    startReminders();
+
+  } else {
+    toast(lang === "ar"
+      ? "لم يتم السماح بالإشعارات"
+      : "Notification permission not granted");
+  }
+};
+
+function startReminders() {
+  if (reminderTimer) clearInterval(reminderTimer);
+
+  reminderTimer = setInterval(() => {
+    if (
+      document.visibilityState === "visible" &&
+      "Notification" in window &&
+      Notification.permission === "granted"
+    ) {
+      new Notification("HydraCare-JO", {
+        body: lang === "ar"
+          ? "تذكير لطيف: اشرب الماء 💧"
+          : "Gentle reminder: drink water 💧"
+      });
+    }
+  }, 60 * 60 * 1000);
+}
+
+// ===============================
+// START APPLICATION
+// ===============================
+
+loadLocal();
+renderText();
+setupFirebase();
+
+if ("serviceWorker" in navigator && location.protocol !== "file:") {
+  navigator.serviceWorker.register("./sw.js")
+    .catch(error => console.error("Service Worker Error:", error));
+}
+
 $("#langBtn").onclick=()=>{lang=lang==="ar"?"en":"ar";renderText()};
 $("#quickAdd").onclick=()=>addWater(250);
 document.querySelectorAll("[data-amount]").forEach(b=>b.onclick=()=>addWater(Number(b.dataset.amount)));
